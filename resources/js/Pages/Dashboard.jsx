@@ -115,7 +115,7 @@ export default function Dashboard({ auth, stats }) {
                                 </Link>
                                 <div className="flex items-center text-blue-600 text-sm">
                                     <Users className="w-4 h-4 mr-1" />
-                                    <span>5 active</span>
+                                    <span>{stats.total_categories} active</span>
                                 </div>
                             </div>
                         </div>
@@ -204,6 +204,7 @@ export default function Dashboard({ auth, stats }) {
                                                         )}
                                                     </div>
                                                     <div>
+                                                        {console.log(product)}
                                                         <p className="text-sm font-medium text-gray-900 group-hover:text-indigo-600 transition-colors">
                                                             {product.name}
                                                         </p>

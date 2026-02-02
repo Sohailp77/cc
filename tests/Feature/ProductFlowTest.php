@@ -88,13 +88,14 @@ class ProductFlowTest extends TestCase
     {
         $user = User::factory()->create();
         Category::create(['name' => 'Cat1', 'unit_name' => 'U', 'metric_type' => 'fixed']);
-        
+
         $response = $this->actingAs($user)->get('/dashboard');
-        
+
         $response->assertOk();
-        $response->assertInertia(fn ($page) => $page
-            ->component('Dashboard')
-            ->has('stats')
+        $response->assertInertia(
+            fn($page) => $page
+                ->component('Dashboard')
+                ->has('stats')
         );
     }
 
@@ -140,7 +141,7 @@ class ProductFlowTest extends TestCase
             'product_id' => $product->id,
             'name' => 'Standard Valve',
             'stock_quantity' => 20,
-            'variant_price' => null, 
+            'variant_price' => null,
         ]);
 
         $this->assertDatabaseHas('product_variants', [
@@ -154,10 +155,10 @@ class ProductFlowTest extends TestCase
         $user = User::factory()->create();
         $category = Category::create(['name' => 'Temp', 'unit_name' => 'X', 'metric_type' => 'fixed']);
         $product = Product::create(['category_id' => $category->id, 'name' => 'To Delete', 'price' => 10]);
-        
+
         ProductVariant::create([
             'product_id' => $product->id,
-            'name' => 'Variant 1', 
+            'name' => 'Variant 1',
             'stock_quantity' => 5
         ]);
 
@@ -187,7 +188,7 @@ class ProductFlowTest extends TestCase
         $product = Product::create(['category_id' => $category->id, 'name' => 'Item', 'price' => 10]);
         $variant = ProductVariant::create([
             'product_id' => $product->id,
-            'name' => 'Old Name', 
+            'name' => 'Old Name',
             'stock_quantity' => 5,
             'variant_price' => 12
         ]);

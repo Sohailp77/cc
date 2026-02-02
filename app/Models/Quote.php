@@ -17,8 +17,10 @@ class Quote extends Model
         'reference_id',
         'status',
         'subtotal',
-        'gst_rate',
-        'gst_type',
+        'gst_rate', // Deprecated but kept for backward compatibility if needed, though likely unused in new implementation
+        'gst_type', // Deprecated
+        'tax_mode', // NEW
+        'tax_config_snapshot', // NEW
         'tax_amount',
         'total_amount',
         'valid_until',
@@ -29,6 +31,7 @@ class Quote extends Model
 
     protected $casts = [
         'valid_until' => 'date',
+        'tax_config_snapshot' => 'array',
     ];
 
     public function user()

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
-    protected $fillable = ['category_id', 'name', 'description', 'price', 'sku', 'image_path', 'unit_size', 'specifications'];
+    protected $fillable = ['category_id', 'name', 'description', 'price', 'sku', 'image_path', 'unit_size', 'specifications', 'tax_rate_id'];
 
     protected $casts = [
         'specifications' => 'array',
@@ -26,6 +26,11 @@ class Product extends Model
         return $this->hasMany(ProductVariant::class);
     }
 
+    public function taxRate()
+    {
+        return $this->belongsTo(TaxRate::class);
+    }
+
     public function quotationItems()
     {
         return $this->hasMany(QuotationItem::class);
@@ -35,6 +40,16 @@ class Product extends Model
     public function getCategoryNameAttribute()
     {
         return $this->category->name;
+    }
+    //also productvariant details
+    public function getProductVariantDetailsAttribute()
+    {
+        return $this->variants;
+    }
+    //also tax rate details
+    public function getTaxRateDetailsAttribute()
+    {
+        return $this->taxRate;
     }
 
     //example to use in frontend

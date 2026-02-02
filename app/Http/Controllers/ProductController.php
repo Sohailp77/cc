@@ -15,7 +15,7 @@ class ProductController extends Controller
     public function index()
     {
         return Inertia::render('Products/Index', [
-            'products' => Product::with('category')->latest()->get()
+            'products' => Product::with(['category', 'taxRate'])->latest()->get()
         ]);
     }
 
@@ -25,7 +25,8 @@ class ProductController extends Controller
     public function create()
     {
         return Inertia::render('Products/Create', [
-            'categories' => Category::all()
+            'categories' => Category::all(),
+            'taxRates' => \App\Models\TaxRate::where('is_active', true)->get()
         ]);
     }
 
@@ -36,6 +37,7 @@ class ProductController extends Controller
     {
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
+            'tax_rate_id' => 'nullable|exists:tax_rates,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
@@ -59,8 +61,8 @@ class ProductController extends Controller
      */
     public function show(Product $product)
     {
-        $product->load(['category', 'variants']);
-        
+        $product->load(['category', 'variants', 'taxRate']);
+
         return Inertia::render('Products/Show', [
             'product' => $product
         ]);
@@ -72,7 +74,9 @@ class ProductController extends Controller
     public function edit(Product $product)
     {
         return Inertia::render('Products/Edit', [
-            'product' => $product
+            'product' => $product,
+            'categories' => Category::all(),
+            'taxRates' => \App\Models\TaxRate::where('is_active', true)->get()
         ]);
     }
 
@@ -82,6 +86,8 @@ class ProductController extends Controller
     public function update(Request $request, Product $product)
     {
         $validated = $request->validate([
+            'category_id' => 'sometimes|exists:categories,id',
+            'tax_rate_id' => 'nullable|exists:tax_rates,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',

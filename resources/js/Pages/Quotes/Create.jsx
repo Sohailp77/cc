@@ -6,18 +6,18 @@ import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import InputError from '@/Components/InputError';
 
-export default function Create({ auth, products }) {
+export default function Create({ auth, products, taxRates, taxSettings }) {
     const { props } = usePage();
     const { data, setData, post, processing, errors, reset } = useForm({
         customer_name: '',
         customer_email: '',
         customer_phone: '',
-        gst_type: 'igst',
-        gst_rate: 18.00,
+        tax_mode: 'item_level', // 'global' or 'item_level'
+        gst_rate: 0, // Used for global mode
         discount_percentage: 0,
         notes: '',
         items: [
-            { id: Date.now(), product_id: '', product_variant_id: '', quantity: 1, price: 0, area: '', _search: '' }
+            { id: Date.now(), product_id: '', product_variant_id: '', quantity: 1, price: 0, area: '', _search: '', tax_rate: 0, tax_rate_id: '' }
         ]
     });
 
@@ -40,7 +40,7 @@ export default function Create({ auth, products }) {
     const addItem = () => {
         setData('items', [
             ...data.items,
-            { id: Date.now(), product_id: '', product_variant_id: '', quantity: 1, price: 0, area: '', _search: '' }
+            { id: Date.now(), product_id: '', product_variant_id: '', quantity: 1, price: 0, area: '', _search: '', tax_rate: 0, tax_rate_id: '' }
         ]);
     };
 
@@ -61,7 +61,18 @@ export default function Create({ auth, products }) {
                 item.price = prod.price || 0;
                 item.product_variant_id = '';
                 item.area = '';
-                // Default area based on quantity 1 if it has unit size? No, keep empty initially.
+                // Set default tax rate from product if available
+                if (prod.tax_rate) {
+                    item.tax_rate = parseFloat(prod.tax_rate.rate);
+                    item.tax_rate_id = prod.tax_rate.id;
+                } else if (prod.tax_rate_id) {
+                    // Fallback if relation not loaded but ID is present (though we eager loaded taxRate)
+                    const rateObj = taxRates.find(r => r.id === prod.tax_rate_id);
+                    if (rateObj) {
+                        item.tax_rate = parseFloat(rateObj.rate);
+                        item.tax_rate_id = rateObj.id;
+                    }
+                }
             }
         }
         else if (field === 'product_variant_id') {
@@ -99,7 +110,22 @@ export default function Create({ auth, products }) {
     const subtotal = calculateSubtotal();
     const discountAmount = (subtotal * Number(data.discount_percentage)) / 100;
     const taxableAmount = subtotal - discountAmount;
-    const taxAmount = (taxableAmount * Number(data.gst_rate)) / 100;
+
+    // Calculate Tax dynamically based on mode
+    let taxAmount = 0;
+
+    if (data.tax_mode === 'global') {
+        taxAmount = (taxableAmount * Number(data.gst_rate)) / 100;
+    } else {
+        // Item Level: Sum of (LineTotal * TaxRate)
+        // Note: Ideally Item Level tax is calculated line by line. 
+        // For simplicity/accuracy, we should sum the tax of each line.
+        taxAmount = data.items.reduce((sum, item) => {
+            const lineTotal = Number(item.price) * Number(item.quantity);
+            return sum + (lineTotal * (Number(item.tax_rate) || 0) / 100);
+        }, 0);
+    }
+
     const totalAmount = taxableAmount + taxAmount;
 
     const handleSubmit = (e) => {
@@ -190,196 +216,6 @@ export default function Create({ auth, products }) {
                             </div>
                         </div>
 
-                        {/* 2. Items Table */}
-                        {/* <div className="bg-white rounded-2xl shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08)] border border-gray-100 overflow-hidden">
-                            <div className="px-6 py-5 border-b border-gray-50 bg-white flex items-center justify-between">
-                                <div className="flex items-center">
-                                    <div className="bg-indigo-50 p-2 rounded-xl mr-4">
-                                        <ShoppingCart className="w-5 h-5 text-indigo-600" />
-                                    </div>
-                                    <h3 className="text-lg font-bold text-gray-900 tracking-tight">Items & Pricing</h3>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={addItem}
-                                    className="inline-flex items-center px-4 py-2 bg-indigo-50 border border-transparent rounded-lg font-semibold text-xs text-indigo-700 uppercase tracking-widest hover:bg-indigo-100 active:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150"
-                                >
-                                    <Plus className="w-4 h-4 mr-2" />
-                                    Add Item
-                                </button>
-                            </div>
-
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-100">
-                                    <thead className="bg-gray-50/50">
-                                        <tr>
-                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider w-16">Image</th>
-                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider w-1/3">Product Details</th>
-                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider w-32">Area</th>
-                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Variant</th>
-                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider w-24">Qty</th>
-                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider w-32">Price</th>
-                                            <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider w-32">Total</th>
-                                            <th className="px-6 py-4 text-right w-16"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-100">
-                                        {data.items.map((item, index) => {
-                                            const product = getProduct(item.product_id);
-                                            const variant = getVariant(item.product_id, item.product_variant_id);
-                                            const imagePath = variant?.image_path || product?.image_path || product?.category?.image_path;
-
-                                            return (
-                                                <tr key={item.id} className="hover:bg-gray-50/80 transition-colors group">
-                                                    <td className="px-6 py-4 align-top">
-                                                        <div className="h-12 w-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden relative shadow-sm">
-                                                            {imagePath ? (
-                                                                <img
-                                                                    src={imagePath}
-                                                                    alt=""
-                                                                    className="h-full w-full object-cover"
-                                                                />
-                                                            ) : (
-                                                                <Package className="h-5 w-5 text-gray-300" />
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 align-top">
-                                                        <select
-                                                            className="block w-full rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2.5 transition-all"
-                                                            value={item.product_id}
-                                                            onChange={(e) => updateItem(index, 'product_id', e.target.value)}
-                                                            required
-                                                        >
-                                                            <option value="">Select Product...</option>
-                                                            {products.map(p => (
-                                                                <option key={p.id} value={p.id}>{p.name}</option>
-                                                            ))}
-                                                        </select>
-                                                        {product?.description && (
-                                                            <div className="mt-2 flex items-start">
-                                                                <div className="min-w-0 flex-1">
-                                                                    <p className="text-xs text-gray-500 leading-relaxed bg-gray-50/80 p-2 rounded-lg border border-gray-100">
-                                                                        {product.description}
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-6 py-4 align-top">
-                                                        {getProduct(item.product_id)?.category?.metric_type === 'area' ? (
-                                                            <div className="relative">
-                                                                <input
-                                                                    type="number" step="0.01" min="0"
-                                                                    className="block w-full rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2.5 transition-all"
-                                                                    placeholder="Sq.m"
-                                                                    value={item.area}
-                                                                    onChange={(e) => updateItem(index, 'area', e.target.value)}
-                                                                />
-                                                                {getProduct(item.product_id)?.unit_size && (
-                                                                    <p className="mt-1 text-[10px] text-gray-400 font-medium">
-                                                                        1 Box = {getProduct(item.product_id).unit_size}
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-gray-300 text-sm flex justify-center py-2">-</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-6 py-4 align-top">
-                                                        <select
-                                                            className="block w-full rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2.5 transition-all disabled:opacity-50"
-                                                            value={item.product_variant_id}
-                                                            onChange={(e) => updateItem(index, 'product_variant_id', e.target.value)}
-                                                            disabled={!item.product_id || !getProduct(item.product_id)?.variants?.length}
-                                                        >
-                                                            <option value="">Base</option>
-                                                            {getProduct(item.product_id)?.variants?.map(v => (
-                                                                <option key={v.id} value={v.id}>{v.name}</option>
-                                                            ))}
-                                                        </select>
-                                                    </td>
-                                                    <td className="px-6 py-4 align-top">
-                                                        <input
-                                                            type="number" min="1"
-                                                            className="block w-full rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2.5 text-center transition-all"
-                                                            value={item.quantity}
-                                                            onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                                                            required
-                                                        />
-                                                    </td>
-                                                    <td className="px-6 py-4 align-top">
-                                                        <div className="relative">
-                                                            <span className="absolute left-3 top-2.5 text-gray-400 text-sm">$</span>
-                                                            <input
-                                                                type="number" min="0" step="0.01"
-                                                                className="block w-full rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2.5 pl-6 transition-all"
-                                                                value={item.price}
-                                                                onChange={(e) => updateItem(index, 'price', e.target.value)}
-                                                                required
-                                                            />
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 align-top text-right">
-                                                        <span className="text-sm font-bold text-gray-900 block py-2.5">
-                                                            ${(item.quantity * item.price).toFixed(2)}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 align-top text-right">
-                                                        {data.items.length > 1 && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => removeItem(index)}
-                                                                className="text-gray-300 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 transition-all"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                        {data.items.length === 0 && (
-                                            <tr>
-                                                <td colSpan="8" className="px-6 py-16 text-center">
-                                                    <div className="flex flex-col items-center justify-center max-w-sm mx-auto">
-                                                        <div className="bg-gray-50 p-4 rounded-full mb-4">
-                                                            <ShoppingCart className="w-8 h-8 text-gray-300" />
-                                                        </div>
-                                                        <h3 className="text-lg font-bold text-gray-900 mb-1">No items added</h3>
-                                                        <p className="text-gray-500 text-sm mb-6">Select products from the catalog to build your quote.</p>
-                                                        <button
-                                                            type="button"
-                                                            onClick={addItem}
-                                                            className="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150"
-                                                        >
-                                                            <Plus className="w-4 h-4 mr-2" />
-                                                            Add First Item
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {data.items.length > 0 && (
-                                <div className="p-4 bg-gray-50/50 border-t border-gray-100 flex justify-center">
-                                    <button
-                                        type="button"
-                                        onClick={addItem}
-                                        className="inline-flex items-center px-6 py-3 border border-gray-200 shadow-sm text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50 hover:border-indigo-200 hover:text-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
-                                    >
-                                        <Plus className="w-4 h-4 mr-2" />
-                                        Add Another Line Item
-                                    </button>
-                                </div>
-                            )}
-
-                            {errors.items && <div className="p-3 bg-red-50 text-red-600 text-sm text-center border-t border-red-100 font-medium">{errors.items}</div>}
-                        </div> */}
-
                         <div className="bg-white rounded-2xl shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08)] border border-gray-100 overflow-hidden">
                             {/* Header Section */}
                             <div className="px-6 py-5 border-b border-gray-50 bg-white flex items-center justify-between">
@@ -462,7 +298,7 @@ export default function Create({ auth, products }) {
 
                                                 {/* Column 2: Inputs Grid (Variant, Area, Qty, Price) */}
                                                 <div className="md:col-span-12 lg:col-span-7">
-                                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                                    <div className={`grid grid-cols-2 sm:grid-cols-${data.tax_mode === 'item_level' ? '5' : '4'} gap-4`}>
 
                                                         {/* Area Field */}
                                                         <div>
@@ -538,6 +374,33 @@ export default function Create({ auth, products }) {
                                                                 />
                                                             </div>
                                                         </div>
+
+                                                        {/* Tax Rate (Item Level) */}
+                                                        {data.tax_mode === 'item_level' && (
+                                                            <div>
+                                                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                                                                    Tax
+                                                                </label>
+                                                                <select
+                                                                    className="block w-full rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2.5 transition-all text-xs"
+                                                                    value={item.tax_rate_id || ''}
+                                                                    onChange={(e) => {
+                                                                        const rateId = e.target.value;
+                                                                        const rateObj = taxRates.find(r => r.id == rateId);
+                                                                        const itemData = { ...item, tax_rate_id: rateId, tax_rate: rateObj ? parseFloat(rateObj.rate) : 0 };
+                                                                        // Update manually
+                                                                        const newItems = [...data.items];
+                                                                        newItems[index] = itemData;
+                                                                        setData('items', newItems);
+                                                                    }}
+                                                                >
+                                                                    <option value="">0%</option>
+                                                                    {taxRates.map(tr => (
+                                                                        <option key={tr.id} value={tr.id}>{tr.name}</option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                        )}
 
                                                     </div>
 
@@ -648,19 +511,35 @@ export default function Create({ auth, products }) {
                                             <span className="text-red-500 font-bold text-sm bg-red-50 px-2 py-1 rounded-md">-${discountAmount.toFixed(2)}</span>
                                         </div>
 
+                                        {/* Tax Mode Selection */}
+                                        <div className="flex justify-between items-center py-2">
+                                            <span className="text-gray-600 text-sm font-medium">Tax Calculation</span>
+                                            <div className="bg-gray-100 p-1 rounded-lg flex text-xs font-medium">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setData('tax_mode', 'global')}
+                                                    className={`px-3 py-1.5 rounded-md transition-all ${data.tax_mode === 'global' ? 'bg-white shadow text-indigo-600 font-bold' : 'text-gray-500 hover:text-gray-700'}`}
+                                                >
+                                                    Global
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setData('tax_mode', 'item_level')}
+                                                    className={`px-3 py-1.5 rounded-md transition-all ${data.tax_mode === 'item_level' ? 'bg-white shadow text-indigo-600 font-bold' : 'text-gray-500 hover:text-gray-700'}`}
+                                                >
+                                                    Per Item
+                                                </button>
+                                            </div>
+                                        </div>
+
                                         <div className="flex justify-between items-center">
                                             <div className="flex items-center space-x-3">
-                                                <span className="text-gray-600 text-sm font-medium">Tax</span>
-                                                <div className="flex space-x-2">
-                                                    <select
-                                                        className="text-xs border-gray-200 bg-gray-50 focus:bg-white rounded-lg focus:border-indigo-500 focus:ring-indigo-500 py-1.5 pl-2 pr-8 font-medium text-gray-600"
-                                                        value={data.gst_type}
-                                                        onChange={e => setData('gst_type', e.target.value)}
-                                                    >
-                                                        <option value="igst">IGST</option>
-                                                        <option value="cgst_sgst">CGST/SGST</option>
-                                                    </select>
-                                                    <div className="relative w-20 group">
+                                                <span className="text-gray-600 text-sm font-medium">
+                                                    {data.tax_mode === 'global' ? 'Global Tax Rate' : 'Total Tax'}
+                                                </span>
+
+                                                {data.tax_mode === 'global' && (
+                                                    <div className="relative w-24 group">
                                                         <input
                                                             type="number"
                                                             className="block w-full text-sm border-gray-200 bg-gray-50 focus:bg-white rounded-lg focus:border-indigo-500 focus:ring-indigo-500 pr-8 py-1.5 transition-all text-right group-hover:border-gray-300"
@@ -669,10 +548,22 @@ export default function Create({ auth, products }) {
                                                         />
                                                         <span className="absolute right-3 top-1.5 text-gray-400 text-xs font-bold">%</span>
                                                     </div>
-                                                </div>
+                                                )}
                                             </div>
                                             <span className="text-gray-900 font-bold text-sm">${taxAmount.toFixed(2)}</span>
                                         </div>
+
+                                        {/* GST Split Display (Visual Only) */}
+                                        {taxSettings.strategy === 'split' && taxAmount > 0 && (
+                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 space-y-2">
+                                                {taxSettings.secondary_labels?.map((label, idx) => (
+                                                    <div key={label} className="flex justify-between items-center text-xs">
+                                                        <span className="text-gray-500">{label} (50%)</span>
+                                                        <span className="text-gray-700 font-medium">${(taxAmount / taxSettings.secondary_labels.length).toFixed(2)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
 
                                         <div className="pt-6 border-t border-dashed border-gray-200">
                                             <div className="flex justify-between items-end">

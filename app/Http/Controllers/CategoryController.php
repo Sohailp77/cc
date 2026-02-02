@@ -99,7 +99,7 @@ class CategoryController extends Controller
         if ($category->products()->count() > 0) {
             return back()->withErrors(['error' => 'Cannot delete category with associated products.']);
         }
-        
+
         $category->delete();
         return redirect()->route('categories.index')->with('success', 'Category deleted successfully.');
     }

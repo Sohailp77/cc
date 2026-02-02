@@ -49,6 +49,12 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     Create Quote
                                 </NavLink>
+                                <NavLink
+                                    href={route('settings.index')}
+                                    active={route().current('settings.*')}
+                                >
+                                    Settings
+                                </NavLink>
                             </div>
                         </div>
 
@@ -170,6 +176,12 @@ export default function AuthenticatedLayout({ header, children }) {
                             active={route().current('quotes.*')}
                         >
                             Create Quote
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            href={route('settings.index')}
+                            active={route().current('settings.*')}
+                        >
+                            Settings
                         </ResponsiveNavLink>
                     </div>
 
