@@ -41,6 +41,7 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
+            'stock_quantity' => 'nullable|integer|min:0',
             'unit_size' => 'nullable|numeric|min:0',
             'specifications' => 'nullable|array',
             'image' => 'nullable|image|max:10240|mimes:jpeg,jpg,png',
@@ -50,6 +51,8 @@ class ProductController extends Controller
             $path = $request->file('image')->store('uploads/products', 'public');
             $validated['image_path'] = '/storage/' . $path;
         }
+
+        $validated['stock_quantity'] = $validated['stock_quantity'] ?? 0;
 
         Product::create($validated);
 
@@ -61,10 +64,11 @@ class ProductController extends Controller
      */
     public function show(Product $product)
     {
-        $product->load(['category', 'variants', 'taxRate']);
+        $product->load(['category', 'variants', 'taxRate', 'stockAdjustments.user', 'stockAdjustments.quote:id,reference_id']);
 
         return Inertia::render('Products/Show', [
-            'product' => $product
+            'product' => $product,
+            'isBoss' => auth()->user()->isBoss(),
         ]);
     }
 
@@ -91,9 +95,12 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
+            'stock_quantity' => 'nullable|integer|min:0',
             'unit_size' => 'nullable|numeric|min:0',
             'image' => 'nullable|image|max:10240',
         ]);
+
+        unset($validated['stock_quantity']); // stock managed via StockController only
 
         if ($request->hasFile('image')) {
             $path = $request->file('image')->store('uploads/products', 'public');

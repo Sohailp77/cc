@@ -1,11 +1,19 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
-import { ArrowLeft, Save, Trash2 } from 'lucide-react';
+import PageHeader from '@/Components/PageHeader';
+import FormCard from '@/Components/FormCard';
+import SlateButton from '@/Components/SlateButton';
+import CancelLink from '@/Components/CancelLink';
+import DangerButton from '@/Components/DangerButton';
+import { Save, Trash2 } from 'lucide-react';
 
 export default function Edit({ auth, product }) {
+    const { appSettings } = usePage().props;
+    const currency = appSettings?.currency_symbol || '₹';
+
     const { data, setData, post, processing, errors } = useForm({
         _method: 'put',
         category_id: product.category_id,
@@ -23,134 +31,126 @@ export default function Edit({ auth, product }) {
     };
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Edit Product</h2>}
-        >
+        <AuthenticatedLayout>
             <Head title="Edit Product" />
 
-            <div className="py-12 bg-gray-50 min-h-screen">
-                <div className="max-w-2xl mx-auto sm:px-6 lg:px-8">
-                    <div className="mb-6">
-                        <Link href={route('products.index')} className="text-gray-500 hover:text-gray-700 flex items-center transition-colors">
-                            <ArrowLeft className="w-4 h-4 mr-1" />
-                            Back to Products
-                        </Link>
-                    </div>
+            <PageHeader
+                title={`Edit: ${product.name}`}
+                subtitle="Update this product's details, price or image."
+                backHref={route('products.index')}
+            />
 
-                    <div className="bg-white/80 backdrop-blur-xl overflow-hidden shadow-xl sm:rounded-2xl border border-gray-100">
-                        <div className="p-8">
-                            <form onSubmit={submit} className="space-y-6">
-                                <div>
-                                    <InputLabel htmlFor="name" value="Product Name" className="text-gray-700 font-medium" />
-                                    <TextInput
-                                        id="name"
-                                        type="text"
-                                        name="name"
-                                        value={data.name}
-                                        className="mt-1 block w-full bg-white/50 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-lg"
-                                        isFocused={true}
-                                        onChange={(e) => setData('name', e.target.value)}
-                                        placeholder="e.g. Premium Widget"
-                                    />
-                                    <InputError message={errors.name} className="mt-2" />
-                                </div>
+            <div className="max-w-2xl">
+                <FormCard>
+                    <form onSubmit={submit} className="space-y-6">
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <InputLabel htmlFor="sku" value="SKU (Stock Keeping Unit)" className="text-gray-700 font-medium" />
-                                        <TextInput
-                                            id="sku"
-                                            type="text"
-                                            name="sku"
-                                            value={data.sku}
-                                            className="mt-1 block w-full bg-white/50 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-lg"
-                                            onChange={(e) => setData('sku', e.target.value)}
-                                            placeholder="e.g. WID-001"
-                                        />
-                                        <InputError message={errors.sku} className="mt-2" />
-                                    </div>
-
-                                    <div>
-                                        <InputLabel htmlFor="price" value="Price ($)" className="text-gray-700 font-medium" />
-                                        <TextInput
-                                            id="price"
-                                            type="number"
-                                            name="price"
-                                            step="0.01"
-                                            value={data.price}
-                                            className="mt-1 block w-full bg-white/50 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-lg"
-                                            onChange={(e) => setData('price', e.target.value)}
-                                            placeholder="0.00"
-                                        />
-                                        <InputError message={errors.price} className="mt-2" />
-                                    </div>
-
-                                    {data.unit_size && (
-                                        <div>
-                                            <InputLabel htmlFor="unit_size" value="Unit Size" className="text-gray-700 font-medium" />
-                                            <TextInput
-                                                id="unit_size"
-                                                type="number"
-                                                name="unit_size"
-                                                step="0.01"
-                                                value={data.unit_size}
-                                                className="mt-1 block w-full bg-white/50 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-lg"
-                                                onChange={(e) => setData('unit_size', e.target.value)}
-                                                placeholder="0.00"
-                                            />
-                                            <InputError message={errors.unit_size} className="mt-2" />
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <InputLabel htmlFor="description" value="Description" className="text-gray-700 font-medium" />
-                                    <textarea
-                                        id="description"
-                                        name="description"
-                                        className="mt-1 block w-full bg-white/50 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-lg shadow-sm"
-                                        rows="4"
-                                        value={data.description}
-                                        onChange={(e) => setData('description', e.target.value)}
-                                        placeholder="Describe the product..."
-                                    ></textarea>
-                                    <InputError message={errors.description} className="mt-2" />
-                                </div>
-
-                                <div className="flex items-center justify-between mt-8 border-t border-gray-100 pt-6">
-                                    <Link
-                                        href={route('products.destroy', product.id)}
-                                        method="delete"
-                                        as="button"
-                                        className="inline-flex items-center px-4 py-2 bg-red-50 text-red-700 border border-transparent rounded-lg font-semibold text-xs uppercase tracking-widest hover:bg-red-100 active:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150"
-                                    >
-                                        <Trash2 className="w-4 h-4 mr-2" />
-                                        Delete Product
-                                    </Link>
-
-                                    <div className="flex items-center">
-                                        <Link
-                                            href={route('products.index')}
-                                            className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-25 transition ease-in-out duration-150 mr-3"
-                                        >
-                                            Cancel
-                                        </Link>
-
-                                        <button
-                                            type="submit"
-                                            disabled={processing}
-                                            className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:from-indigo-700 hover:to-purple-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 shadow-lg glow"
-                                        >
-                                            <Save className="w-4 h-4 mr-2" />
-                                            Update Product
-                                        </button>
-                                    </div>
-                                </div>
-                            </form>
+                        <div>
+                            <InputLabel htmlFor="name" value="Product Name" />
+                            <TextInput
+                                id="name"
+                                type="text"
+                                name="name"
+                                value={data.name}
+                                className="mt-1 block w-full"
+                                isFocused={true}
+                                onChange={(e) => setData('name', e.target.value)}
+                                placeholder="e.g. 60x60 Vitrified Tile"
+                            />
+                            <InputError message={errors.name} className="mt-2" />
                         </div>
-                    </div>
-                </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <InputLabel htmlFor="sku" value="SKU (Optional)" />
+                                <TextInput
+                                    id="sku"
+                                    type="text"
+                                    name="sku"
+                                    value={data.sku}
+                                    className="mt-1 block w-full"
+                                    onChange={(e) => setData('sku', e.target.value)}
+                                    placeholder="e.g. TYP-001"
+                                />
+                                <InputError message={errors.sku} className="mt-2" />
+                            </div>
+
+                            <div>
+                                <InputLabel htmlFor="price" value={`Price per unit (${currency})`} />
+                                <TextInput
+                                    id="price"
+                                    type="number"
+                                    name="price"
+                                    step="0.01"
+                                    value={data.price}
+                                    className="mt-1 block w-full"
+                                    onChange={(e) => setData('price', e.target.value)}
+                                    placeholder="0.00"
+                                />
+                                <InputError message={errors.price} className="mt-2" />
+                            </div>
+
+                            {data.unit_size && (
+                                <div>
+                                    <InputLabel htmlFor="unit_size" value="Unit Size / Coverage" />
+                                    <TextInput
+                                        id="unit_size"
+                                        type="number"
+                                        name="unit_size"
+                                        step="0.01"
+                                        value={data.unit_size}
+                                        className="mt-1 block w-full"
+                                        onChange={(e) => setData('unit_size', e.target.value)}
+                                        placeholder="0.00"
+                                    />
+                                    <InputError message={errors.unit_size} className="mt-2" />
+                                </div>
+                            )}
+                        </div>
+
+                        <div>
+                            <InputLabel htmlFor="image" value="Product Image (Optional)" />
+                            {product.image_path && (
+                                <div className="mb-3">
+                                    <img src={product.image_path} alt="Current" className="w-24 h-24 object-cover rounded-xl shadow-sm" />
+                                </div>
+                            )}
+                            <input
+                                type="file"
+                                id="image"
+                                className="mt-1 block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-slate-100 dark:bg-slate-950 file:text-slate-700 dark:text-slate-300 hover:file:bg-slate-200"
+                                onChange={(e) => setData('image', e.target.files[0])}
+                                accept="image/*"
+                            />
+                            <InputError message={errors.image} className="mt-2" />
+                        </div>
+
+                        <div>
+                            <InputLabel htmlFor="description" value="Description" />
+                            <textarea
+                                id="description"
+                                name="description"
+                                className="mt-1 block w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 focus:border-slate-400 dark:focus:border-slate-500 focus:ring-slate-200 dark:focus:ring-slate-700 rounded-xl shadow-sm"
+                                rows="4"
+                                value={data.description}
+                                onChange={(e) => setData('description', e.target.value)}
+                                placeholder="Describe the product..."
+                            ></textarea>
+                            <InputError message={errors.description} className="mt-2" />
+                        </div>
+
+                        <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-6">
+                            <DangerButton href={route('products.destroy', product.id)} method="delete" as="button">
+                                <Trash2 className="w-4 h-4" /> Delete Product
+                            </DangerButton>
+                            <div className="flex items-center gap-3">
+                                <CancelLink href={route('products.index')} />
+                                <SlateButton disabled={processing}>
+                                    <Save className="w-4 h-4" /> Update Product
+                                </SlateButton>
+                            </div>
+                        </div>
+                    </form>
+                </FormCard>
             </div>
         </AuthenticatedLayout>
     );

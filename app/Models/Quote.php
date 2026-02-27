@@ -17,8 +17,6 @@ class Quote extends Model
         'reference_id',
         'status',
         'subtotal',
-        'gst_rate', // Deprecated but kept for backward compatibility if needed, though likely unused in new implementation
-        'gst_type', // Deprecated
         'tax_mode', // NEW
         'tax_config_snapshot', // NEW
         'tax_amount',
@@ -42,5 +40,15 @@ class Quote extends Model
     public function items()
     {
         return $this->hasMany(QuoteItem::class);
+    }
+
+    public function stockAdjustments()
+    {
+        return $this->hasMany(StockAdjustment::class);
+    }
+
+    public function revenues()
+    {
+        return $this->hasMany(Revenue::class);
     }
 }

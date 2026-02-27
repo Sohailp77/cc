@@ -34,7 +34,7 @@ export default function Toast() {
     if (!visible) return null;
 
     return (
-        <div className={`fixed bottom-4 right-4 z-50 flex items-center p-4 rounded-lg shadow-lg text-white transform transition-all duration-300 ease-in-out ${type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-indigo-600'
+        <div className={`fixed bottom-4 right-4 z-50 flex items-center p-4 rounded-lg shadow-lg text-white transform transition-all duration-300 ease-in-out ${type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-brand-600'
             } animate-fade-in-up`}>
             <div className="mr-3">
                 {type === 'success' && <CheckCircle className="w-6 h-6" />}

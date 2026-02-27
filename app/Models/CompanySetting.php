@@ -21,4 +21,12 @@ class CompanySetting extends Model
             'secondary_labels' => [],
         ];
     }
+
+    /**
+     * Return a flat key => value map of all company-group settings.
+     */
+    public static function getCompanyProfile(): array
+    {
+        return self::where('group', 'company')->pluck('value', 'key')->all();
+    }
 }
